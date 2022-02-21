@@ -1,0 +1,14 @@
+textarea {
+  font-family: monospace;
+}
+.ace_container {
+  position: relative;
+  height: 500px;
+}
+.ace_editor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
