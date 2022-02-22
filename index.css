@@ -1,10 +1,14 @@
 textarea {
   font-family: monospace;
+  font-size: small;
+  white-space: pre;
 }
+
 .ace_container {
   position: relative;
   height: 500px;
 }
+
 .ace_editor {
   position: absolute;
   top: 0;
