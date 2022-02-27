@@ -34,10 +34,17 @@ function handleFileSelect(evt) {
   fields.fileSize = file.size;
   fieldsEditor.setValue(JSON.stringify(fields, null, 2));
 
-  updateProgressBar(0);
-  md5 = CryptoJS.algo.MD5.create();
-  sha1 = CryptoJS.algo.SHA1.create();
-  sha256 = CryptoJS.algo.SHA256.create();
+  updateProgressBar(0, 'progress-load');
+  updateProgressBar(0, 'progress-md5');
+  updateProgressBar(0, 'progress-sha1');
+  updateProgressBar(0, 'progress-sha256');
+  
+  md5 = new Worker('worker_md5.js');
+  md5.onmessage = onWorkerResult('md5');
+  sha1 = new Worker('worker_sha1.js');
+  sha1.onmessage = onWorkerResult('sha1');
+  sha256 = new Worker('worker_sha256.js');
+  sha256.onmessage = onWorkerResult('sha256');
   
   readChunked(file);
 };
@@ -56,46 +63,58 @@ function readChunked(file) {
     offset += reader.result.length;
     handleLoadedChunk(reader.result, offset, fileSize); 
     if (offset >= fileSize) {
+      md5.postMessage({isFinish: true});
+      sha1.postMessage({isFinish: true});
+      sha256.postMessage({isFinish: true});
       handleChange();
       return;
     }
     readNext();
   };
-
+  
   reader.onerror = function(err) {
     endCallback(err || {});
   };
-
+  
   function readNext() {
     var fileSlice = file.slice(offset, offset + chunkSize);
     reader.readAsBinaryString(fileSlice);
   }
   readNext();
-}
+}  
 
 function handleLoadedChunk(chunk, offset, fileSize) {
-  md5.update(CryptoJS.enc.Latin1.parse(chunk));
-  sha1.update(CryptoJS.enc.Latin1.parse(chunk));
-  sha256.update(CryptoJS.enc.Latin1.parse(chunk));
-  updateProgressBar(Math.round(offset/fileSize*100));
+  var progress = Math.round(offset/fileSize*100);
+  md5.postMessage({isfinish: false, chunk: chunk, progress: progress});
+  sha1.postMessage({isfinish: false, chunk: chunk, progress: progress});
+  sha256.postMessage({isfinish: false, chunk: chunk, progress: progress});
+
+  updateProgressBar(progress, 'progress-load');
 }
 
-function updateProgressBar(percent) {
-  var bar = document.querySelector('.progress-bar');
+function updateProgressBar(percent, progressBarId) {
+  var bar = document.getElementById(progressBarId);
   bar.style.width = percent + '%';
   bar.innerHTML = percent + '%';
-
 }
 
 function handleChange() {
   fields = JSON.parse(fieldsEditor.getValue());
-  fields.md5 = md5.finalize().toString();
-  fields.sha1 = sha1.finalize().toString();
-  fields.sha256 = sha256.finalize().toString();
-  fieldsEditor.setValue(JSON.stringify(fields, null, 2));
   template = JSON.parse(templateEditor.getValue()); 
   document.getElementById("result").value = Mustache.render(JSON.stringify(template, null, 2), fields);
   writeCookie();
+}
+
+function onWorkerResult(key) {
+  return function(result) {
+    if (result.data.isProgress) {
+      updateProgressBar(result.data.progress, 'progress-' + key);
+    } else {
+      fields[key] = result.data.result;
+      fieldsEditor.setValue(JSON.stringify(fields, null, 2));
+      handleChange();
+    }
+  }
 }
 
 function writeCookie() {
