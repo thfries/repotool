@@ -51,7 +51,7 @@ function handleFileSelect(evt) {
 
 function readChunked(file) {
   var fileSize   = file.size;
-  var chunkSize  = 4 * 1024 * 1024; // 4MB
+  var chunkSize  = 16 * 1024 * 1024;
   var offset     = 0;
   
   var reader = new FileReader();
