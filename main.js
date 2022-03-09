@@ -10,7 +10,9 @@ var fieldsEditor;
 var templateEditor;
 
 window.onload = function() {
+  createAdditionalFields();
   readCookie();
+
   
   fieldsEditor = ace.edit("fieldsEditor");
   fieldsEditor.session.setMode("ace/mode/json");
@@ -51,6 +53,7 @@ function handleFileSelect(evt) {
 
 function readChunked(file) {
   var fileSize   = file.size;
+  var chunkSize  = Math.min(fileSize, 16 * 1024 * 1024);
   var chunkSize  = 16 * 1024 * 1024;
   var offset     = 0;
   
@@ -128,4 +131,21 @@ function readCookie() {
   if (envcookie) {
     template = JSON.parse(window.atob(envcookie));
   }        
+}
+
+function createAdditionalFields() {
+  html = '';
+  ['version', 'packageName', 'componentName'].forEach((key, i) => {
+    html += `<div class="input-group mb-1">
+              <label class="col-sm-4 col-form-label">${key}</label>
+              <input type="text" id="${key}" class="form-control" onchange="fieldChanged(event)"/>
+            </div>`;
+  });
+  document.getElementById('additionalFields').innerHTML = html;
+}
+
+function fieldChanged(evt) {
+  fields[evt.target.id] = evt.target.value;
+  fieldsEditor.setValue(JSON.stringify(fields, null, 2));
+  handleChange();
 }

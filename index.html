@@ -11,40 +11,41 @@
     <script src="main.js"></script>
     <title>Repository Tool</title>
     <body>
-      <div class="container">
+      <div class="container-fluid">
         <div class="row">
           <div class="col-md-4">
             <form>
-              <div class="mb-3">
+              <div class="mb-1">
                 <label class="form-label" for="fileSelector">File to upload</label>
                 <input type="file" id="fileSelector" class="form-control" onchange="handleFileSelect(event)"/>
               </div>
             </form>
-            <div class="row">
+            <div class="input-group mb-1">
               <label class="col-sm-2 col-form-label">Load</label>
               <div class="progress col-sm-10 progress-centered">
                 <div class="progress-bar progress-bar-striped" id="progress-load" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
             </div>
-            <div class="row">
+            <div class="input-group mb-1">
               <label class="col-sm-2 col-form-label">Md5</label>
               <div class="progress col-sm-10 progress-centered">
                 <div class="progress-bar progress-bar-striped" id="progress-md5" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
             </div>
-            <div class="row">
+            <div class="input-group mb-1">
               <label class="col-sm-2 col-form-label">Sha1</label>
               <div class="progress col-sm-10 progress-centered">
                 <div class="progress-bar progress-bar-striped" id="progress-sha1" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
             </div>
-            <div class="row">
+            <div class="input-group mb-1">
               <label class="col-sm-2 col-form-label">Sha256</label>
               <div class="progress col-sm-10 progress-centered">
                 <div class="progress-bar progress-bar-striped" id="progress-sha256" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
               </div>
             </div>
-            <div class="mb-3">
+            <div id="additionalFields"></div>
+            <div class="mb-1">
               <label class="form-label" for="fieldsEditor">Fields</label>
               <div class="ace_container" style="height:200px;">
                 <div class="ace_editor" id="fieldsEditor"></div>
