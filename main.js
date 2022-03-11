@@ -3,26 +3,41 @@ var template = {
   "fileSize": "{{fileSize}}",
   "md5": "{{md5}}",
   "sha1": "{{sha1}}",
-  "sha256": "{{sha256}}"
+  "sha256": "{{sha256}}",
+  "version": "{{version}}",
+  "field1": "{{field1}}",
+  "field2": "{{field2}}",
 };
+
+var configuration = {
+  'Configuration 1': {
+    'field1': 'value1.1',
+    'field2': 'value1.2'
+  },
+  'Configuration 2': {
+    'field1': 'value2.1',
+    'field2': 'value2.2'
+  }
+}
+
 var fields = {};
-var fieldsEditor;
+var configurationEditor;
 var templateEditor;
 
 window.onload = function() {
-  createAdditionalFields();
   readCookie();
-
   
-  fieldsEditor = ace.edit("fieldsEditor");
-  fieldsEditor.session.setMode("ace/mode/json");
-  fieldsEditor.on('blur', handleChange);
+  configurationEditor = ace.edit("configurationEditor");
+  configurationEditor.session.setMode("ace/mode/json");
+  configurationEditor.on('blur', loadConfiguration);
+  configurationEditor.setValue(JSON.stringify(configuration, null, 2));
+
   templateEditor = ace.edit("templateEditor");
   templateEditor.session.setMode("ace/mode/json");
   templateEditor.on('blur', handleChange);
-  
   templateEditor.setValue(JSON.stringify(template, null, 2));
-  fieldsEditor.setValue(JSON.stringify(fields, null, 2));
+
+  loadConfiguration();
 };
 
 var md5;
@@ -31,10 +46,11 @@ var sha256;
 
 function handleFileSelect(evt) {
   var file = evt.target.files[0];
-  fields = {};
   fields.fileName = file.name;
   fields.fileSize = file.size;
-  fieldsEditor.setValue(JSON.stringify(fields, null, 2));
+  fields.version = file.name.replace(/^[^\d]*/gim, '');
+  fields.version = fields.version.replace(/[^\d]*(\.[^\.]*)?$/gim, '');
+  document.getElementById('version').value = fields.version;
 
   updateProgressBar(0, 'progress-load');
   updateProgressBar(0, 'progress-md5');
@@ -102,7 +118,7 @@ function updateProgressBar(percent, progressBarId) {
 }
 
 function handleChange() {
-  fields = JSON.parse(fieldsEditor.getValue());
+  fields.version = document.getElementById('version').value;
   template = JSON.parse(templateEditor.getValue()); 
   document.getElementById("result").value = Mustache.render(JSON.stringify(template, null, 2), fields);
   writeCookie();
@@ -114,7 +130,6 @@ function onWorkerResult(key) {
       updateProgressBar(result.data.progress, 'progress-' + key);
     } else {
       fields[key] = result.data.result;
-      fieldsEditor.setValue(JSON.stringify(fields, null, 2));
       handleChange();
     }
   }
@@ -127,25 +142,27 @@ function writeCookie() {
 }
 
 function readCookie() {
-  const envcookie = document.cookie.split(';')[0].split('=')[1];
-  if (envcookie) {
-    template = JSON.parse(window.atob(envcookie));
-  }        
-}
-
-function createAdditionalFields() {
-  html = '';
-  ['version', 'packageName', 'componentName'].forEach((key, i) => {
-    html += `<div class="input-group mb-1">
-              <label class="col-sm-4 col-form-label">${key}</label>
-              <input type="text" id="${key}" class="form-control" onchange="fieldChanged(event)"/>
-            </div>`;
+  document.cookie.split(';').forEach((value, i) => {
+    const cookie = value.trim().split('=');
+    if (cookie[0] === 'repotool-template2') {
+      template = JSON.parse(window.atob(cookie[1]));
+    }
   });
-  document.getElementById('additionalFields').innerHTML = html;
 }
 
-function fieldChanged(evt) {
-  fields[evt.target.id] = evt.target.value;
-  fieldsEditor.setValue(JSON.stringify(fields, null, 2));
+function setPackageFields(evt) {
+  fields.packageName = evt.target.value;
+  Object.keys(configuration[fields.packageName]).forEach((field, i) => {
+    fields[field] = configuration[evt.target.value][field];
+  })
   handleChange();
+}
+
+function loadConfiguration() {
+  configuration = JSON.parse(configurationEditor.getValue());
+  var html = '<option selected>Select package</option>';
+  Object.keys(configuration).forEach((packageName, i) => {
+    html += `<option value="${packageName}">${packageName}</option>`
+  })
+  document.getElementById('packageName').innerHTML = html;
 }
