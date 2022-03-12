@@ -1,12 +1,13 @@
 var template = {
-  "fileName": "{{fileName}}",
-  "fileSize": "{{fileSize}}",
-  "md5": "{{md5}}",
-  "sha1": "{{sha1}}",
-  "sha256": "{{sha256}}",
+  "fileName": "{{file.fileName}}",
+  "fileSize": "{{file.fileSize}}",
+  "md5": "{{file.md5}}",
+  "sha1": "{{file.sha1}}",
+  "sha256": "{{file.sha256}}",
   "version": "{{version}}",
-  "field1": "{{field1}}",
-  "field2": "{{field2}}",
+  "packageName": "{{config.packageName}}",
+  "field1": "{{config.field1}}",
+  "field2": "{{config.field2}}",
 };
 
 var configuration = {
@@ -23,12 +24,14 @@ var configuration = {
 var fields = {};
 var configurationEditor;
 var templateEditor;
+var configurationChanged = false;
 
 window.onload = function() {
   readCookie();
   
   configurationEditor = ace.edit("configurationEditor");
   configurationEditor.session.setMode("ace/mode/json");
+  configurationEditor.on('change', (e) => {configurationChanged = true;});
   configurationEditor.on('blur', loadConfiguration);
   configurationEditor.setValue(JSON.stringify(configuration, null, 2));
 
@@ -45,9 +48,11 @@ var sha1;
 var sha256;
 
 function handleFileSelect(evt) {
+  fields.file = {};
   var file = evt.target.files[0];
-  fields.fileName = file.name;
-  fields.fileSize = file.size;
+  fields.file.fileName = file.name;
+  fields.file.fileSize = file.size;
+
   fields.version = file.name.replace(/^[^\d]*/gim, '');
   fields.version = fields.version.replace(/[^\d]*(\.[^\.]*)?$/gim, '');
   document.getElementById('version').value = fields.version;
@@ -120,7 +125,7 @@ function updateProgressBar(percent, progressBarId) {
 function handleChange() {
   fields.version = document.getElementById('version').value;
   template = JSON.parse(templateEditor.getValue()); 
-  document.getElementById("result").value = Mustache.render(JSON.stringify(template, null, 2), fields);
+  document.getElementById('result').value = Mustache.render(JSON.stringify(template, null, 2), fields);
   writeCookie();
 }
 
@@ -129,7 +134,7 @@ function onWorkerResult(key) {
     if (result.data.isProgress) {
       updateProgressBar(result.data.progress, 'progress-' + key);
     } else {
-      fields[key] = result.data.result;
+      fields.file[key] = result.data.result;
       handleChange();
     }
   }
@@ -139,30 +144,41 @@ function writeCookie() {
   const d = new Date();
   d.setTime(d.getTime() + 30*24*60*60*1000);
   document.cookie = 'repotool-template=' + window.btoa(JSON.stringify(template)) + ';expires=' + d.toUTCString();
+  document.cookie = 'repotool-configuration=' + window.btoa(JSON.stringify(configuration)) + ';expires=' + d.toUTCString();
 }
 
 function readCookie() {
   document.cookie.split(';').forEach((value, i) => {
     const cookie = value.trim().split('=');
-    if (cookie[0] === 'repotool-template2') {
+    if (cookie[0] === 'repotool-template') {
       template = JSON.parse(window.atob(cookie[1]));
+    }
+    if (cookie[0] === 'repotool-configuration') {
+      configuration = JSON.parse(window.atob(cookie[1]));
     }
   });
 }
 
 function setPackageFields(evt) {
-  fields.packageName = evt.target.value;
-  Object.keys(configuration[fields.packageName]).forEach((field, i) => {
-    fields[field] = configuration[evt.target.value][field];
+  fields.config = {};
+  fields.config.packageName = evt.target.value;
+  Object.keys(configuration[evt.target.value]).forEach((field, i) => {
+    fields.config[field] = configuration[evt.target.value][field];
   })
   handleChange();
 }
 
 function loadConfiguration() {
+  if (!configurationChanged) {
+    return;
+  }
+  fields.config = {};
   configuration = JSON.parse(configurationEditor.getValue());
+  configurationChanged = false;
   var html = '<option selected>Select package</option>';
   Object.keys(configuration).forEach((packageName, i) => {
     html += `<option value="${packageName}">${packageName}</option>`
   })
   document.getElementById('packageName').innerHTML = html;
+  handleChange();
 }
